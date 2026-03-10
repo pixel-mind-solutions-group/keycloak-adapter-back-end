@@ -1,3 +1,10 @@
+server:
+  port: 8883
+  servlet:
+    context-path: /kcs
+
 spring:
+  profiles:
+    active: dev
   application:
     name: keycloak-adapter

@@ -1,0 +1,16 @@
+version: '1'
+
+services:
+  keycloak26:
+    image: quay.io/keycloak/keycloak:26.5.5
+    container_name: keycloak26
+    command: start-dev          # use 'start' for production
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://host.docker.internal:5432/keycloak26
+      KC_DB_USERNAME: keycloak26
+      KC_DB_PASSWORD: PixelmindSriLanka
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: PixelmindSriLanka
+    ports:
+      - "8883:8080"
