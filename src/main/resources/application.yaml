@@ -1,10 +1,21 @@
 server:
-  port: 8883
-  servlet:
-    context-path: /kcs
+  port: 8884
 
 spring:
   profiles:
     active: dev
+
+keycloak:
+  server-url: http://localhost:8883
+  admin:
+    username: admin
+    password: PixelmindSriLanka
+    client-id: admin-cli
+    realm: master
+
+app:
+  check:
+    access:
+      all: true
   application:
     name: keycloak-adapter
