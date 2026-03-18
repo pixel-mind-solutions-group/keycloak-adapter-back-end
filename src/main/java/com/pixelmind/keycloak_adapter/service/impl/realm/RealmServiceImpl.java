@@ -15,7 +15,6 @@ import org.keycloak.representations.idm.RealmRepresentation;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class RealmServiceImpl implements RealmService {
