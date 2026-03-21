@@ -35,8 +35,8 @@ public class RealmServiceImpl implements RealmService {
                     if (isRealmExists(realmRequest.getRealmName())) {
                         return new CommonResponseDTO(
                                 HttpStatus.CONFLICT.value(),
-                                "Realm already exists: " + realmRequest.getRealmName(),
-                                null
+                                null,
+                                "Realm already exists: " + realmRequest.getRealmName()
                         );
                     }
 
@@ -57,8 +57,8 @@ public class RealmServiceImpl implements RealmService {
                     if (!isRealmExists(realmRequest.getId())) {
                         return new CommonResponseDTO(
                                 HttpStatus.CONFLICT.value(),
-                                "Realm is not exists: " + realmRequest.getId(),
-                                null
+                                null,
+                                "Realm is not exists: " + realmRequest.getId()
                         );
                     }
 
@@ -82,15 +82,15 @@ public class RealmServiceImpl implements RealmService {
                     if (!isRealmExists(realmRequest.getId())) {
                         return new CommonResponseDTO(
                                 HttpStatus.CONFLICT.value(),
-                                "Realm is not exists: " + realmRequest.getId(),
-                                null
+                                null,
+                                "Realm is not exists: " + realmRequest.getId()
                         );
 
                     } else if (realmRequest.getId().equalsIgnoreCase(CommonConstant.MASTER_REALM_NAME)) {
                         return new CommonResponseDTO(
                                 HttpStatus.FORBIDDEN.value(),
-                                "Cannot delete the master realm",
-                                null
+                                null,
+                                "Cannot delete the master realm"
                         );
                     }
 
@@ -115,8 +115,8 @@ public class RealmServiceImpl implements RealmService {
 
         return new CommonResponseDTO(
                 HttpStatus.OK.value(),
-                message,
-                null
+                null,
+                message
         );
     }
 

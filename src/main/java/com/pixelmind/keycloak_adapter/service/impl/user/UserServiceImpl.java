@@ -80,8 +80,8 @@ public class UserServiceImpl implements UserService {
 
         return new CommonResponseDTO(
                 HttpStatus.CREATED.value(),
-                "User created and roles assigned successfully",
-                "USER ID: " + userId
+                "USER ID: " + userId,
+                "User created and roles assigned successfully"
         );
     }
 
@@ -118,8 +118,8 @@ public class UserServiceImpl implements UserService {
 
         return new CommonResponseDTO(
                 HttpStatus.OK.value(),
-                "User updated successfully: " + userId,
-                null
+                null,
+                "User updated successfully: " + userId
         );
     }
 
@@ -224,13 +224,14 @@ public class UserServiceImpl implements UserService {
 
             return new CommonResponseDTO(
                     HttpStatus.OK.value(),
-                    message, null
+                    null,
+                    message
             );
 
         } catch (NotFoundException e) {
-            return new CommonResponseDTO(404, "User or Realm not found", null);
+            throw new BaseException(HttpStatus.NOT_FOUND.value(), "User or Realm not found");
         } catch (Exception e) {
-            return new CommonResponseDTO(500, "Unexpected error: " + e.getMessage(), null);
+            throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Unexpected error: " + e.getMessage());
         }
     }
 
@@ -255,8 +256,8 @@ public class UserServiceImpl implements UserService {
 
             return new CommonResponseDTO(
                     HttpStatus.OK.value(),
-                    "Credentials deleted successfully",
-                    null
+                    null,
+                    "Credentials deleted successfully"
             );
 
         } catch (BaseException e) {
