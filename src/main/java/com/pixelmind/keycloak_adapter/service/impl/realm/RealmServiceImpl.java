@@ -8,7 +8,6 @@ import com.pixelmind.keycloak_adapter.exception.BaseException;
 import com.pixelmind.keycloak_adapter.service.realm.RealmService;
 import jakarta.ws.rs.ClientErrorException;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.keycloak.admin.client.Keycloak;
 import org.keycloak.admin.client.resource.RealmResource;
 import org.keycloak.representations.idm.RealmRepresentation;
