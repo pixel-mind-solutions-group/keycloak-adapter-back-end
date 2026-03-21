@@ -21,8 +21,4 @@ public class AuthController {
     public ResponseEntity<CommonResponseDTO> getToken(@RequestBody TokenRequestDTO tokenRequest) {
         return ResponseEntity.ok(authService.getToken(tokenRequest));
     }
-
-    // refresh token
-
-    // token expire
 }
