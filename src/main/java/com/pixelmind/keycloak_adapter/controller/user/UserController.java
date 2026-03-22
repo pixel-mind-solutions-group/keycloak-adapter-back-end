@@ -3,10 +3,13 @@ package com.pixelmind.keycloak_adapter.controller.user;
 import com.pixelmind.keycloak_adapter.dto.CommonResponseDTO;
 import com.pixelmind.keycloak_adapter.dto.user.UserRequestDTO;
 import com.pixelmind.keycloak_adapter.dto.user.credential.CredentialRequestDTO;
+import com.pixelmind.keycloak_adapter.dto.user.permission.PermissionRequest;
 import com.pixelmind.keycloak_adapter.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RequiredArgsConstructor
 @RestController
@@ -26,6 +29,11 @@ public class UserController {
                                                         @RequestParam(value = "userId") String userId,
                                                         @RequestBody UserRequestDTO user) {
         return ResponseEntity.ok(userService.updateUser(realmName, userId, user));
+    }
+
+    @PostMapping(value = "/assign-permissions")
+    public ResponseEntity<CommonResponseDTO> assignClientRoles(@RequestBody PermissionRequest permissionRequest) {
+        return ResponseEntity.ok(userService.assignClientRoles(permissionRequest));
     }
 
     @PutMapping(value = "/credential/reset")

@@ -3,6 +3,7 @@ package com.pixelmind.keycloak_adapter.service.impl.user;
 import com.pixelmind.keycloak_adapter.dto.CommonResponseDTO;
 import com.pixelmind.keycloak_adapter.dto.user.UserRequestDTO;
 import com.pixelmind.keycloak_adapter.dto.user.credential.CredentialRequestDTO;
+import com.pixelmind.keycloak_adapter.dto.user.permission.PermissionRequest;
 import com.pixelmind.keycloak_adapter.exception.BaseException;
 import com.pixelmind.keycloak_adapter.mapper.user.UserMapper;
 import com.pixelmind.keycloak_adapter.service.user.UserService;
@@ -35,6 +36,7 @@ public class UserServiceImpl implements UserService {
                                         UserRequestDTO userRequest) {
 
         UserRepresentation userRepresentation = userMapper.toUserRepresentation(new UserRepresentation(), userRequest);
+        userRepresentation.setUsername(userRequest.getUsername());
 
         // ── Step 3: Create user ───────────────────────────────────
         Response response = keycloak
@@ -54,34 +56,10 @@ public class UserServiceImpl implements UserService {
         String locationHeader = response.getHeaderString("Location");
         String userId = locationHeader.substring(locationHeader.lastIndexOf("/") + 1);
 
-        // ── Step 5: Assign client roles if provided ───────────────
-        if (userRequest.getClientId() != null &&
-                userRequest.getPermissions() != null &&
-                !userRequest.getPermissions().isEmpty()) {
-
-            try {
-                assignClientRoles(realmName, userId, userRequest.getClientId(), userRequest.getPermissions());
-
-            } catch (NotFoundException e) {
-
-                // ── Rollback: delete user if role assignment failed ───────
-                rollbackUserCreation(realmName, userId);
-
-                throw new BaseException(HttpStatus.NOT_FOUND.value(), e.getMessage());
-
-            } catch (Exception e) {
-
-                // ── Rollback: delete user if anything failed ──────────────
-                rollbackUserCreation(realmName, userId);
-
-                throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Unexpected error: " + e.getMessage());
-            }
-        }
-
         return new CommonResponseDTO(
                 HttpStatus.CREATED.value(),
                 "USER ID: " + userId,
-                "User created and roles assigned successfully"
+                "User created successfully"
         );
     }
 
@@ -91,30 +69,24 @@ public class UserServiceImpl implements UserService {
                                         UserRequestDTO userRequest) {
 
         // ── Step 1: Get existing user ─────────────────────────────
-        UserResource userResource = keycloak
-                .realm(realmName)
-                .users()
-                .get(userId);
+        UserResource userResource;
+        try {
+            userResource = keycloak
+                    .realm(realmName)
+                    .users()
+                    .get(userId);
+
+        } catch (NotFoundException e) {
+            throw new BaseException(HttpStatus.NOT_FOUND.value(), "User not found: " + userId);
+
+        } catch (Exception e) {
+            throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Unexpected error occurred during user update " + userId);
+        }
 
         UserRepresentation existingUser = userResource.toRepresentation();
 
         // ── Step 3: Apply user update ─────────────────────────────
         userResource.update(userMapper.toUserRepresentation(existingUser, userRequest));
-
-        // ── Step 4: Update client roles if provided ───────────────
-        if (userRequest.getClientId() != null &&
-                !userRequest.getPermissions().isEmpty()) {
-
-            try {
-                assignClientRoles(realmName, userId, userRequest.getClientId(), userRequest.getPermissions());
-
-            } catch (NotFoundException e) {
-                throw new BaseException(HttpStatus.NOT_FOUND.value(), e.getMessage());
-
-            } catch (Exception e) {
-                throw new BaseException(HttpStatus.INTERNAL_SERVER_ERROR.value(), "Unexpected error: " + e.getMessage());
-            }
-        }
 
         return new CommonResponseDTO(
                 HttpStatus.OK.value(),
@@ -139,27 +111,23 @@ public class UserServiceImpl implements UserService {
     }
 
     // ── Role Assignment Helper ────────────────────────────────────────────────────
-    private void assignClientRoles(
-            String realmName,
-            String userId,
-            String clientId,
-            List<String> permissions
-    ) {
+    @Override
+    public CommonResponseDTO assignClientRoles(PermissionRequest permissionRequest) {
 
         // Step 1: Find the internal client UUID by clientId name
         ClientRepresentation client = keycloak
-                .realm(realmName)
+                .realm(permissionRequest.getRealmName())
                 .clients()
-                .findByClientId(clientId)
+                .findByClientId(permissionRequest.getClientId())
                 .stream()
                 .findFirst()
-                .orElseThrow(() -> new NotFoundException("Client not found: " + clientId));
+                .orElseThrow(() -> new NotFoundException("Client not found: " + permissionRequest.getClientId()));
 
         String clientUUID = client.getId();
 
         // Step 2: Fetch all available roles for that client
         List<RoleRepresentation> availableRoles = keycloak
-                .realm(realmName)
+                .realm(permissionRequest.getRealmName())
                 .clients()
                 .get(clientUUID)
                 .roles()
@@ -167,15 +135,28 @@ public class UserServiceImpl implements UserService {
 
         // Step 3: Filter only the roles that were requested
         List<RoleRepresentation> rolesToAssign = availableRoles.stream()
-                .filter(role -> permissions.contains(role.getName()))
+                .filter(role -> permissionRequest.getPermissions().contains(role.getName()))
                 .toList();
 
         if (rolesToAssign.isEmpty()) {
-            throw new NotFoundException("None of the provided roles found in client: " + clientId);
+            throw new NotFoundException("None of the provided roles found in client: " + permissionRequest.getClientId());
         }
 
+        List<UserRepresentation> users = keycloak
+                .realm(permissionRequest.getRealmName())
+                .users()
+                .search(permissionRequest.getUsername(), true); // exact match
+
+        if (users == null || users.isEmpty()) {
+            throw new NotFoundException("User not found");
+        }
+
+        // Usually username is unique → take first
+        UserRepresentation user = users.get(0);
+        String userId = user.getId();
+
         RoleMappingResource roleMappingResource = keycloak
-                .realm(realmName)
+                .realm(permissionRequest.getRealmName())
                 .users()
                 .get(userId)
                 .roles();
@@ -191,12 +172,18 @@ public class UserServiceImpl implements UserService {
         }
 
         // Step 4: Assign filtered roles to the user
-        keycloak.realm(realmName)
+        keycloak.realm(permissionRequest.getRealmName())
                 .users()
                 .get(userId)
                 .roles()
                 .clientLevel(clientUUID)
                 .add(rolesToAssign);
+
+        return new CommonResponseDTO(
+                HttpStatus.OK.value(),
+                null,
+                "User roles assigned successfully"
+        );
     }
 
     @Override
